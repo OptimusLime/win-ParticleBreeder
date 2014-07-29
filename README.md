@@ -1,4 +1,4 @@
-win-ParticleBreeder
-===================
+win-Picbreeder
+==============
 
-Can you make an online particle evolver like picbreeder quickly? Dunno yet. 
+A picbreeder clone integrated with the WIN platform. Available to experiment at http://winark.org.

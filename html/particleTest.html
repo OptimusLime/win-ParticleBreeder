@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset=utf-8 />
+	<title></title>
+
+	<link rel="stylesheet" type="text/css" media="screen" href="./build/build.css" />
+	<script type="text/javascript" src="./build/build.js"></script>
+	<script type="text/javascript" src="./js/modernizr.custom.js"></script>
+	<script type="text/javascript" src="./js/cppnWorkerActivation.js"></script>
+
+
+</head>
+<body class="flexcenter">
+
+<script src="./js/Three.js"></script>
+<script src="./js/Detector.js"></script>
+<script src="./js/Stats.js"></script>
+<script src="./js/OrbitControls.js"></script>
+<script src="./js/THREEx.KeyboardState.js"></script>
+<script src="./js/THREEx.FullScreen.js"></script>
+<script src="./js/THREEx.WindowResize.js"></script>
+
+<script src="./js/ParticleEngine.js"></script>
+<script src="./js/ParticleEngineExamples.js"></script>
+
+<!-- GUI for experimenting with values -->		
+<script type='text/javascript' src='./js/DAT.GUI.min.js'></script>
+
+<!-- jQuery code to display an information button and box when clicked. -->
+<script src="./js/jquery-1.9.1.js"></script>
+<script src="./js/jquery-ui.js"></script>
+<script src="./js/info.js"></script>
+<div id="infoButton"></div>
+<div id="infoBox" title="Demo Information">
+This three.js demo is boss, yo.
+</div>
+<div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+	<!-- <div id="buttons" style="display: inline-block;">
+		<div id="addChild" style="display: inline-block; margin: 5px;">Add Child</div>
+		<div id="removeChild" style="display: inline-block; margin: 5px;">Remove Random Child</div>
+
+		<div id="addPage" style="display: inline-block; margin: 5px;">Next Page</div>
+		<div id="backPage" style="display: inline-block; margin: 5px;">Back a Page</div>
+	</div> -->
+
+	<div id="home" style="height:100%;"> </div>
+
+	<!-- Now we start messing with the flex object -->
+	<script type="text/javascript">
+	console.log("Loading PBHome");
+	//this will automatically decode query string in to urlParams argument!
+        var urlParams;
+        (window.onpopstate = function () {
+            var match,
+                    pl     = /\+/g,  // Regex for replacing addition symbol with a space
+                    search = /([^&=]+)=?([^&]*)/g,
+                    decode = function (s) { return decodeURIComponent(s.replace(pl, " ")); },
+                    query  = window.location.search.substring(1);
+
+            urlParams = {};
+            while (match = search.exec(query))
+                urlParams[decode(match[1])] = decode(match[2]);
+        })();
+        // standard global variables
+		var container, scene, camera, renderer, controls, stats;
+		var keyboard = new THREEx.KeyboardState();
+		var clock = new THREE.Clock();
+		// custom global variables
+		var cube;
+
+		window.onload = function() {
+
+			
+
+			init();
+			animate();
+
+		
+			//grab our webworker, we should start 7 workers
+			var WorkerQueue = require('webworker-queue');
+
+			var totalWorkers = 8;
+			var queue = new WorkerQueue("/js/cppnWorkerActivation.js", totalWorkers);
+			var winneat = require('win-neat');
+
+
+			var genoToPicture = require('geno-to-picture');
+
+			//for now, must match the win-save name 
+			var picArtName = "picArtifact";
+
+
+			var traverse = require('optimuslime-traverse');
+
+			var winsetup = require('win-setup');
+
+	    	var moduleJSON = 
+			{
+				"cppn-add" : require('cppn-additions'),
+				"pbEncoding" : require('pbEncoding'),
+				"win-flexIEC" : require("win-flexIEC"),
+				"win-query" : require("win-query"),
+				"win-pub" : require("win-publish"),
+				"win-iec" : require("win-iec"),
+				"win-gen" : require("win-gen"),
+				"win-schema" : require("win-schema"),
+				"win-neat" : winneat
+			};
+
+			var testingLogLevel = 10;
+
+			var pbConfig = require('win-picbreeder/pbConfig.json');
+
+
+			var configurations = 
+			{
+				"global" : {
+					server : pbConfig.serverRoot + (pbConfig.serverPort ? pbConfig.serverPort : "") + pbConfig.apiRoot 
+					// server : "http://winark.org/apps/win-Picbreeder"
+					// ,
+					// port: 3000
+				},
+				"win-neat" : {
+					options : {
+						initialMutationCount : 5, 
+						postMutationCount : 5
+					},
+					logLevel : testingLogLevel
+				},
+				"win-flexIEC" : {
+					logLevel : testingLogLevel
+				},
+				"win-publish" : {
+					logLevel : testingLogLevel
+				},
+				"pbEncoding" : {
+					logLevel : testingLogLevel
+				},
+				"win-iec" : {
+	                genomeType : picArtName
+	                //these options aren't relevant -- might change in the future -- these are for win-neat module
+					
+					,logLevel : testingLogLevel
+				},
+				"win-gen" : {
+					"encodings" : [
+						picArtName,
+						"NEATGenotype"
+					]
+					,validateParents : true
+					,validateOffspring : true
+					,logLevel : testingLogLevel
+				},
+				"win-schema" : {
+					multipleErrors : true
+					// ,logLevel : testingLogLevel
+				}
+			};
+
+			var events = ["evolution:loadSeeds", 
+						"evolution:getOrCreateOffspring", 
+						"evolution:selectParents", 
+						"query:getArtifacts", "query:getSeeds"];
+			//,
+			// "evolution:getOrCreateOffspring",
+			// "evolution:selectParents",
+			// "evolution:publishArtifact",
+			// "evolution:unselectParents"
+			// var events = ["ui:initializeDisplay", "ui:ready", "query:getArtifacts", "query:getSeeds"];
+
+			winsetup(events, moduleJSON, configurations, function(err, backObject)
+			{
+				if(err)
+				{
+					console.error(err);
+					return;
+				}
+				//setup sends back this stuff:
+				// {logger: backLog, emitter: backEmit, backbone: backbone, qCall: qBackboneResponse};
+				var backbone = backbone;
+				var backLog = backObject.logger;
+				var backEmit = backObject.emitter;
+				var qCallBackbone = backObject.qCall;
+
+
+				//before we setup the ui, we need to make a query -- either for a seed or for a 
+
+				// var seed1 = require('win-Picbreeder/seeds/seed1.js');
+
+				var seeds = [];//[seed1];
+				var maxSeeds = 1;
+				var eventQuery;
+				var p1, p2;
+
+				var isBranch = false;
+
+				if(urlParams["branch"])
+				{
+					isBranch = true;
+					//we know what wid we're looking for
+					eventQuery = "query:getArtifacts";
+					p1 = picArtName;
+					p2 = urlParams["branch"];
+				}
+				else
+				{
+					eventQuery = "query:getSeeds";
+					p1 = picArtName;
+					p2 = maxSeeds;
+				}
+
+				backEmit(eventQuery, p1, p2, function(err, res)
+				{
+					//if we're a branch, we pull parents from teh response
+					//otherwise, we pull parents from the seed response
+
+					// seeds = res;
+
+					seeds = [];
+					for(var key in res){
+
+						var s = res[key];
+						traverse(s).forEach(function(node)
+						{
+							//if we have a key = "_id" get rid of it
+							if(this.key == "_id" || this.key == "__v" || this.key == "creation")
+								this.remove();
+						})
+
+						seeds.push(s);
+					}
+
+					backLog.log("Sseeds", seeds);
+
+					var div = document.getElementById("flex");
+
+					var objSize = {width: 175, height: 175};
+
+					var parentSize = {width: objSize.width, height: objSize.height, columnMargin: 4}, 
+					evoSize = {width: objSize.width, height: objSize.height, rowMargin: 4, columnMargin: 4};
+
+					var flexOptions =  
+					{
+						parentOptions : {
+							objectSize: parentSize
+						},
+						evoOptions : 
+						{
+							objectSize: evoSize
+						}
+						// mode: 'vertical' ,
+					};
+
+					var evoIDToData = {};
+
+					function getOrCreateData(eID, individual, finished)
+					{
+						//we only sent in an ID and a callback -- no individual
+						if(typeof individual == "function")
+						{
+							finished = individual;
+							individual = undefined;
+						}
+						//return;
+						var dataURL = evoIDToData[eID];
+						if(!dataURL)
+						{
+							//get our genome
+							var ng = winneat.genotypeFromJSON(individual.genome);
+
+							//cppn decodeing
+							var cppn = ng.networkDecode();
+
+							//turn it into a function
+	    					var functionObject = cppn.createPureCPPNFunctions();
+
+	    					//job description huzzah
+							var jobData = {
+								wid: individual.wid,
+								width: objSize.width, 
+								height: objSize.height,
+								nodeOrder: functionObject.nodeOrder, 
+								stringFunctions: functionObject.stringFunctions,
+								biasCount: 1, //one bias node in neat genome -- ddoy
+								outputCount: ng.outputNodeCount //output count
+							};
+
+
+							// onmessage({data: jobData});
+
+							//queue up this task with our webworkers, and get a callback with the dataURL
+							queue.queueJob(jobData, function(dataObject)
+							{
+								//save this info for next time
+								evoIDToData[eID] = dataObject.dataURL;
+
+								//all done
+								finished(dataObject.dataURL);
+							});
+						}
+						else
+						{
+							//all done!
+							finished(dataURL);
+						}
+					}
+
+					var uID, flex;
+
+					var seedMap = {};
+					for(var i=0; i < seeds.length; i++)
+						seedMap["" + i] = seeds[i];
+
+					var seedID = 0;
+					var uiCount = seeds.length;
+
+					//for now we pass seed information to init display -- later, we'll move this to a more appropriate place 
+					//a module should have control over getting seeds (they are constant for a domain and hosted on the server)
+					qCallBackbone("evolution:loadSeeds", seedMap)
+						.then(function()
+						{
+							backLog("Finished loading seeds into evolution.");
+							//now load that data into our display 
+							// var uID = uiCount++;
+							// var uiObj = {uID: uID, ui: nf, emitter: uiEmitter, seeds: seedMap};
+							// uiObjects[uID] = uiObj;
+							//send back the ui object
+							// done(undefined, uiObj);
+							return qCallBackbone("evolution:selectParents", [seedID]);
+						})
+						.then(function()
+						{
+							backLog("Finished loading seeds into evolution.");
+							//now load that data into our display 
+							var uID = uiCount++;
+							// var uiObj = {uID: uID, ui: nf, emitter: uiEmitter, seeds: seedMap};
+							// uiObjects[uID] = uiObj;
+							//send back the ui object
+							// done(undefined, uiObj);
+
+							//create 1 cppn -- or as many unique IDs as we want new offspring 
+							return qCallBackbone("evolution:getOrCreateOffspring", [uID]);
+						})
+						.then(function(allIndividuals)
+						{
+							//now we see what happened!
+							backLog("Finished generating a cppn: ");
+							backLog(allIndividuals);
+
+						}, function(err)
+						{
+							console.error(err);
+						});
+
+				})
+
+			});
+      
+
+		}
+
+/*
+	Three.js "tutorials by example"
+	Author: Lee Stemkoski
+	Date: July 2013 (three.js v59dev)
+*/
+
+// MAIN
+
+
+// FUNCTIONS 		
+function init() 
+{
+	// SCENE
+	scene = new THREE.Scene();
+	// CAMERA
+	var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+	var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 2, FAR = 5000;
+	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+	scene.add(camera);
+	camera.position.set(0,200,400);
+	camera.lookAt(scene.position);	
+	// RENDERER
+	if ( Detector.webgl )
+		renderer = new THREE.WebGLRenderer( {antialias:true} );
+	else
+		renderer = new THREE.CanvasRenderer(); 
+	renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+	container = document.getElementById( 'ThreeJS' );
+	container.appendChild( renderer.domElement );
+	// EVENTS
+	THREEx.WindowResize(renderer, camera);
+	THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+	// CONTROLS
+	controls = new THREE.OrbitControls( camera, renderer.domElement );
+	// STATS
+	stats = new Stats();
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.bottom = '0px';
+	stats.domElement.style.zIndex = 100;
+	container.appendChild( stats.domElement );
+	// LIGHT
+	var light = new THREE.PointLight(0xffffff);
+	light.position.set(0,250,0);
+	scene.add(light);
+	// FLOOR
+	var floorTexture = new THREE.ImageUtils.loadTexture( 'images/checkerboard.jpg' );
+	floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
+	floorTexture.repeat.set( 10, 10 );
+	var floorMaterial = new THREE.MeshBasicMaterial( { color: 0x444444, map: floorTexture, side: THREE.DoubleSide } );
+	var floorGeometry = new THREE.PlaneGeometry(1000, 1000, 10, 10);
+	var floor = new THREE.Mesh(floorGeometry, floorMaterial);
+	floor.position.y = -10.5;
+	floor.rotation.x = Math.PI / 2;
+	scene.add(floor);
+	// SKYBOX/FOG
+	var skyBoxGeometry = new THREE.CubeGeometry( 4000, 4000, 4000 );
+	var skyBoxMaterial = new THREE.MeshBasicMaterial( { color: 0x000000, side: THREE.BackSide } );
+	var skyBox = new THREE.Mesh( skyBoxGeometry, skyBoxMaterial );
+    scene.add(skyBox);
+	
+	////////////
+	// CUSTOM //
+	////////////
+
+	
+	this.engine = new ParticleEngine();
+	engine.setValues( Examples.fountain );
+	engine.initialize();
+	
+	// GUI for experimenting with parameters
+
+	gui = new dat.GUI();	
+	parameters = 
+	{
+		fountain:   function() { restartEngine( Examples.fountain   ); },
+		startunnel: function() { restartEngine( Examples.startunnel ); },		
+		starfield:  function() { restartEngine( Examples.starfield  ); },		
+		fireflies:  function() { restartEngine( Examples.fireflies  ); },		
+		clouds:     function() { restartEngine( Examples.clouds     ); },		
+		smoke:      function() { restartEngine( Examples.smoke      ); },		
+		fireball:   function() { restartEngine( Examples.fireball   ); },		
+		candle:     function() { restartEngine( Examples.candle     ); },		
+		rain:       function() { restartEngine( Examples.rain       ); },		
+		snow:       function() { restartEngine( Examples.snow       ); },		
+		firework:   function() { restartEngine( Examples.firework   ); }		
+	};
+
+	gui.add( parameters, 'fountain'   ).name("Star Fountain");
+	gui.add( parameters, 'startunnel' ).name("Star Tunnel");
+	gui.add( parameters, 'starfield'  ).name("Star Field");
+	gui.add( parameters, 'fireflies'  ).name("Fireflies");
+	gui.add( parameters, 'clouds'     ).name("Clouds");
+	gui.add( parameters, 'smoke'      ).name("Smoke");
+	gui.add( parameters, 'fireball'   ).name("Fireball");
+	gui.add( parameters, 'candle'     ).name("Candle");
+	gui.add( parameters, 'rain'       ).name("Rain");
+	gui.add( parameters, 'snow'       ).name("Snow");
+	gui.add( parameters, 'firework'   ).name("Firework");
+	
+	gui.open();	
+}
+
+function animate() 
+{
+    requestAnimationFrame( animate );
+	render();		
+	update();
+}
+
+function restartEngine(parameters)
+{
+	resetCamera();
+	
+	engine.destroy();
+	engine = new ParticleEngine();
+	engine.setValues( parameters );
+	engine.initialize();
+}
+
+function resetCamera()
+{
+	// CAMERA
+	var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+	var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+	//camera.up = new THREE.Vector3( 0, 0, 1 );
+	camera.position.set(0,200,400);
+	camera.lookAt(scene.position);	
+	scene.add(camera);
+	
+	controls = new THREE.OrbitControls( camera, renderer.domElement );
+	THREEx.WindowResize(renderer, camera);
+}
+
+
+function update()
+{
+/*
+	if ( keyboard.pressed("1") ) 
+		restartEngine( fountain );
+	if ( keyboard.pressed("2") ) 
+		restartEngine( startunnel );
+	if ( keyboard.pressed("3") ) 
+		restartEngine( starfield );
+	if ( keyboard.pressed("4") ) 
+		restartEngine( fireflies );
+		
+	if ( keyboard.pressed("5") ) 
+		restartEngine( clouds );
+	if ( keyboard.pressed("6") ) 
+		restartEngine( smoke );
+		
+	if ( keyboard.pressed("7") ) 
+		restartEngine( fireball );
+	if ( keyboard.pressed("8") ) 
+		restartEngine( Examples.candle );
+		
+	if ( keyboard.pressed("9") ) 
+		restartEngine( rain );
+	if ( keyboard.pressed("0") ) 
+		restartEngine( snow );
+		
+	if ( keyboard.pressed("q") ) 
+		restartEngine( firework );
+	// also: reset camera angle
+*/
+	
+	controls.update();
+	stats.update();
+	
+	var dt = clock.getDelta();
+	engine.update( dt * 0.5 );	
+}
+
+function render() 
+{
+	renderer.render( scene, camera );
+}
+
+		
+
+
+
+	</script>
+
+
+
+
+</body>
+</html>
